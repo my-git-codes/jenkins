@@ -5,7 +5,8 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    docker.build('my-app')
+                    // Build the Docker image with the tag 'latest'
+                    docker.build('my-app:latest')
                 }
             }
         }
@@ -13,7 +14,8 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    docker.image('my-app').inside {
+                    // Run tests inside the Docker container
+                    docker.image('my-app:latest').inside {
                         sh 'npm test'  // or any other test command
                     }
                 }
@@ -23,9 +25,23 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    docker.image('my-app').push('shivanidandu809/my-app:latest')
+                    // Define the target image tag for the Docker registry
+                    def targetImage = 'shivanidandu809/my-app:latest'
+                    // Tag the built image with the target repository path and tag
+                    sh "docker tag my-app:latest ${targetImage}"
+                    // Log in to Docker Hub (Ensure you have Docker Hub credentials configured)
+                    withDockerRegistry([credentialsId: 'dockerhub', url: 'https://index.docker.io/v1/']) {
+                        // Push the tagged image to the Docker registry
+                        sh "docker push ${targetImage}"
+                    }
                 }
             }
+        }
+    }
+    // Cleanup workspace after the pipeline run
+    post {
+        always {
+            deleteDir()
         }
     }
 }
